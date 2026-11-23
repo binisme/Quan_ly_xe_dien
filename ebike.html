@@ -1,0 +1,1731 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <meta name="referrer" content="no-referrer" />
+  <title>Hệ Thống Quản Lý Xe Điện Công Viên</title>
+  <!-- Tailwind CSS CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <!-- Google Fonts: Inter -->
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet" />
+
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          fontFamily: {
+            sans: ['Inter', 'system-ui', '-apple-system', 'sans-serif'],
+          },
+        },
+      },
+    };
+  </script>
+
+  <style>
+    body {
+      font-family: 'Inter', system-ui, -apple-system, sans-serif;
+      -webkit-tap-highlight-color: transparent;
+      overscroll-behavior-y: none;
+    }
+
+    @keyframes alertPulse {
+      0%, 100% {
+        background-color: #dc2626;
+        box-shadow: 0 0 0 0 rgba(220, 38, 38, 0.7);
+        transform: scale(1);
+      }
+      50% {
+        background-color: #b91c1c;
+        box-shadow: 0 0 16px 4px rgba(239, 68, 68, 0.65);
+        transform: scale(1.015);
+      }
+    }
+
+    .expired-card-pulse {
+      animation: alertPulse 1.1s ease-in-out infinite;
+    }
+
+    .no-scrollbar::-webkit-scrollbar {
+      display: none;
+    }
+    .no-scrollbar {
+      -ms-overflow-style: none;
+      scrollbar-width: none;
+    }
+
+    .header-title-shadow {
+      text-shadow: 0 2px 6px rgba(15, 23, 42, 0.35), 0 0 2px rgba(255, 255, 255, 0.9);
+    }
+    .date-shadow {
+      text-shadow: 0 1px 4px rgba(255, 255, 255, 0.95), 0 0 8px rgba(255, 255, 255, 0.8);
+    }
+  </style>
+</head>
+
+<body class="min-h-screen bg-gradient-to-b from-sky-400 via-sky-300 to-cyan-100 text-slate-800 select-none pb-20">
+
+  <!-- ==================== HEADER ==================== -->
+  <header class="sticky top-0 z-30 bg-gradient-to-b from-sky-500/95 via-sky-400/95 to-sky-400/85 backdrop-blur-md shadow-sm border-b border-white/40 px-3 pt-2.5 pb-2">
+    <div class="max-w-5xl mx-auto">
+      <!-- Top Row: Brand & Quick Controls -->
+      <div class="flex items-center justify-between gap-2 mb-1">
+        <!-- Logo Badge -->
+        <div class="flex items-center gap-1.5 bg-white/90 px-2.5 py-1 rounded-full shadow-sm border border-sky-200">
+          <svg class="w-5 h-5 text-emerald-600 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M19 17h2c.6 0 1-.4 1-1v-3c0-.9-.7-1.7-1.5-1.9C18.7 10.6 16 10 16 10s-1.3-1.4-2.2-2.3c-.5-.4-1.1-.7-1.8-.7H5c-.6 0-1.1.4-1.4.9l-1.4 2.9A3.7 3.7 0 0 0 2 12v4c0 .6.4 1 1 1h2"/>
+            <circle cx="7" cy="17" r="2"/>
+            <path d="M9 17h6"/>
+            <circle cx="17" cy="17" r="2"/>
+          </svg>
+          <span class="font-black text-xs sm:text-sm tracking-tight bg-gradient-to-r from-blue-700 to-emerald-600 bg-clip-text text-transparent">PBCAR PARK</span>
+        </div>
+
+        <!-- Quick Controls: Test Mode (5s) + Sound Toggle -->
+        <div class="flex items-center gap-1.5">
+          <button id="quickTestBtn" onclick="toggleTestMode()"
+            class="flex items-center gap-1 px-2.5 py-1.5 rounded-full text-[11px] font-bold transition-all active:scale-95 shadow-sm border"
+            title="Chế độ Test đếm ngược 5 giây">
+            <svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round">
+              <circle cx="12" cy="13" r="8"/><path d="M12 9v4l2 2"/><path d="M5 3 2 6"/><path d="m22 6-3-3"/><path d="M10 2h4"/>
+            </svg>
+            <span id="quickTestLabel">Test 5s: TẮT</span>
+          </button>
+
+          <button id="quickSoundBtn" onclick="toggleSound()"
+            class="flex items-center justify-center w-8 h-8 rounded-full bg-white/95 text-slate-700 shadow-sm border border-white active:scale-95 transition-all"
+            title="Bật/tắt âm thanh cảnh báo" aria-label="Bật hoặc tắt âm thanh">
+          </button>
+        </div>
+      </div>
+
+      <!-- Center Title & Current Date -->
+      <div class="text-center leading-tight">
+        <div id="headerDate" class="text-red-600 font-extrabold text-sm sm:text-base tracking-wide date-shadow">
+          Today: --/--/----
+        </div>
+        <h1 class="text-slate-900 font-black text-[15px] sm:text-xl tracking-tight uppercase header-title-shadow">
+          HỆ THỐNG QUẢN LÝ XE ĐIỆN CÔNG VIÊN
+        </h1>
+      </div>
+
+      <!-- Global Expired Banner -->
+      <div id="globalExpiredBanner" class="hidden mt-2 bg-red-600 text-white rounded-xl px-3 py-2 shadow-md border border-red-300 flex items-center justify-between gap-2 animate-pulse">
+        <div class="flex items-center gap-2 min-w-0">
+          <svg class="w-5 h-5 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9"/><path d="M10.3 21a1.94 1.94 0 0 0 3.4 0"/>
+          </svg>
+          <span id="globalExpiredText" class="text-xs sm:text-sm font-extrabold truncate">Có xe đã hết giờ!</span>
+        </div>
+        <button onclick="switchTab('home')" class="shrink-0 bg-white text-red-600 font-extrabold text-xs px-2.5 py-1 rounded-lg shadow-sm active:scale-95">
+          Xem ngay
+        </button>
+      </div>
+    </div>
+  </header>
+
+  <!-- ==================== MAIN CONTENT AREA ==================== -->
+  <main class="max-w-5xl mx-auto px-2 sm:px-4 pt-3 pb-6">
+
+    <!-- TAB 1: HOME (VEHICLE GRID) -->
+    <section id="tab-home" class="tab-section">
+      <!-- Status Summary Bar -->
+      <div class="grid grid-cols-3 gap-2 mb-3">
+        <div class="bg-white/90 backdrop-blur rounded-xl px-2.5 py-1.5 shadow-sm border border-white flex items-center justify-between">
+          <span class="text-[11px] sm:text-xs font-semibold text-slate-500">Đang chờ</span>
+          <span id="statIdle" class="text-sm sm:text-base font-extrabold text-emerald-600">24</span>
+        </div>
+        <div class="bg-white/90 backdrop-blur rounded-xl px-2.5 py-1.5 shadow-sm border border-white flex items-center justify-between">
+          <span class="text-[11px] sm:text-xs font-semibold text-slate-500">Đang chạy</span>
+          <span id="statRunning" class="text-sm sm:text-base font-extrabold text-amber-600">0</span>
+        </div>
+        <div class="bg-white/90 backdrop-blur rounded-xl px-2.5 py-1.5 shadow-sm border border-white flex items-center justify-between">
+          <span class="text-[11px] sm:text-xs font-semibold text-slate-500">Hết giờ</span>
+          <span id="statExpired" class="text-sm sm:text-base font-extrabold text-red-600">0</span>
+        </div>
+      </div>
+
+      <!-- Vehicle Cards Grid (24 cars) -->
+      <div id="vehicleGrid" class="grid grid-cols-3 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-2 sm:gap-3">
+      </div>
+    </section>
+
+    <!-- TAB 2: REPORT -->
+    <section id="tab-report" class="tab-section hidden space-y-3">
+      <div class="bg-white/95 rounded-2xl p-4 shadow-md border border-sky-200">
+        <div class="flex items-center justify-between mb-3">
+          <h2 class="text-base sm:text-lg font-extrabold text-slate-800 flex items-center gap-2">
+            <span class="w-8 h-8 rounded-xl bg-blue-100 text-blue-600 flex items-center justify-center">
+              <svg class="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M3 3v18h18"/><path d="M18 17V9"/><path d="M13 17V5"/><path d="M8 17v-3"/></svg>
+            </span>
+            Báo Cáo Doanh Thu Hôm Nay
+          </h2>
+          <span id="reportDateBadge" class="text-xs font-bold text-red-600 bg-red-50 px-2.5 py-1 rounded-full border border-red-200"></span>
+        </div>
+
+        <!-- Total Revenue Card -->
+        <div class="bg-gradient-to-r from-blue-600 to-emerald-500 rounded-2xl p-4 text-white shadow-sm mb-3">
+          <div class="text-xs sm:text-sm font-medium text-white/90">Tổng doanh thu hôm nay</div>
+          <div id="reportTotalRevenue" class="text-2xl sm:text-3xl font-black tracking-tight mt-0.5">0 đ</div>
+          <div class="mt-2 pt-2 border-t border-white/25 flex items-center justify-between text-xs sm:text-sm">
+            <span>Tổng số lượt bấm (Bắt đầu + Gia hạn):</span>
+            <span id="reportTotalRides" class="font-extrabold text-base">0 lượt</span>
+          </div>
+        </div>
+
+        <!-- Package Breakdown -->
+        <div class="grid grid-cols-2 gap-2.5">
+          <div class="bg-sky-50 border border-sky-200 rounded-xl p-3">
+            <div class="flex items-center justify-between">
+              <span class="text-xs font-bold text-sky-700 bg-sky-100 px-2 py-0.5 rounded-full">Gói 15 phút</span>
+              <span class="text-xs font-bold text-slate-500">50k/lượt</span>
+            </div>
+            <div id="reportPkg15Count" class="text-xl font-black text-slate-800 mt-2">0 lượt</div>
+            <div id="reportPkg15Revenue" class="text-xs font-bold text-emerald-600 mt-0.5">0 đ</div>
+          </div>
+
+          <div class="bg-amber-50 border border-amber-200 rounded-xl p-3">
+            <div class="flex items-center justify-between">
+              <span class="text-xs font-bold text-amber-700 bg-amber-100 px-2 py-0.5 rounded-full">Gói 30 phút</span>
+              <span class="text-xs font-bold text-slate-500">80k/lượt</span>
+            </div>
+            <div id="reportPkg30Count" class="text-xl font-black text-slate-800 mt-2">0 lượt</div>
+            <div id="reportPkg30Revenue" class="text-xs font-bold text-emerald-600 mt-0.5">0 đ</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Detail Per-Vehicle -->
+      <div class="bg-white/95 rounded-2xl p-4 shadow-md border border-sky-200">
+        <h3 class="text-sm sm:text-base font-extrabold text-slate-800 mb-3">Thống kê chi tiết theo từng xe</h3>
+        <div id="reportVehicleTable" class="divide-y divide-slate-100 max-h-96 overflow-y-auto">
+        </div>
+      </div>
+    </section>
+
+    <!-- TAB 3: HISTORY -->
+    <section id="tab-history" class="tab-section hidden space-y-3">
+      <div class="bg-white/95 rounded-2xl p-4 shadow-md border border-sky-200">
+        <div class="flex items-center justify-between mb-3">
+          <h2 class="text-base sm:text-lg font-extrabold text-slate-800 flex items-center gap-2">
+            <span class="w-8 h-8 rounded-xl bg-emerald-100 text-emerald-600 flex items-center justify-center">
+              <svg class="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+            </span>
+            Lịch Sử Lượt Chạy
+          </h2>
+          <span id="historyCountBadge" class="text-xs font-bold text-slate-600 bg-slate-100 px-2.5 py-1 rounded-full">0 lượt</span>
+        </div>
+
+        <div id="historyList" class="space-y-2">
+        </div>
+      </div>
+    </section>
+
+    <!-- TAB 4: VEHICLES MANAGEMENT -->
+    <section id="tab-vehicles" class="tab-section hidden space-y-3">
+      <div class="bg-white/95 rounded-2xl p-4 shadow-md border border-sky-200">
+        <div class="flex flex-wrap items-center justify-between gap-2 mb-3">
+          <h2 class="text-base sm:text-lg font-extrabold text-slate-800 flex items-center gap-2">
+            <span class="w-8 h-8 rounded-xl bg-purple-100 text-purple-600 flex items-center justify-center">
+              <svg class="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><circle cx="18.5" cy="17.5" r="3.5"/><circle cx="5.5" cy="17.5" r="3.5"/><circle cx="15" cy="5" r="1"/><path d="M12 17.5V14l-3-3 4-3 2 3h2"/></svg>
+            </span>
+            Quản Lý Danh Sách Xe
+          </h2>
+
+          <div class="flex items-center gap-2">
+            <button onclick="addVehicle()"
+              class="bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold px-3 py-2 rounded-xl shadow-sm active:scale-95 transition flex items-center gap-1">
+              <span>+ Thêm xe</span>
+            </button>
+            <button onclick="promptResetTodayCounts()"
+              class="bg-amber-100 hover:bg-amber-200 text-amber-800 text-xs font-bold px-3 py-2 rounded-xl active:scale-95 transition">
+              Reset lượt Today
+            </button>
+          </div>
+        </div>
+
+        <p class="text-xs text-slate-500 mb-3">
+          Tổng số xe hiện tại: <strong id="vehiclesTotalCount" class="text-slate-800">24</strong> xe.
+        </p>
+
+        <div id="vehiclesManageList" class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-2">
+        </div>
+      </div>
+    </section>
+
+    <!-- TAB 5: SETTINGS -->
+    <section id="tab-settings" class="tab-section hidden space-y-3">
+      <div class="bg-white/95 rounded-2xl p-4 shadow-md border border-sky-200 space-y-4">
+        <h2 class="text-base sm:text-lg font-extrabold text-slate-800 flex items-center gap-2">
+          <span class="w-8 h-8 rounded-xl bg-slate-100 text-slate-700 flex items-center justify-center">
+            <svg class="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
+          </span>
+          Cài Đặt Hệ Thống
+        </h2>
+
+        <!-- Alarm Sound Toggle -->
+        <div class="flex items-center justify-between p-3 bg-slate-50 rounded-xl border border-slate-200">
+          <div class="pr-3">
+            <div class="text-sm font-bold text-slate-800">Âm thanh chuông cảnh báo</div>
+            <div class="text-xs text-slate-500">Phát tiếng chuông lặp lại khi xe hết giờ</div>
+          </div>
+          <button id="settingSoundToggle" onclick="toggleSound()" class="relative inline-flex h-7 w-12 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none">
+            <span class="pointer-events-none inline-block h-6 w-6 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out"></span>
+          </button>
+        </div>
+
+        <!-- Voice Toggle -->
+        <div class="flex items-center justify-between p-3 bg-slate-50 rounded-xl border border-slate-200">
+          <div class="pr-3">
+            <div class="text-sm font-bold text-slate-800">Giọng đọc tiếng Việt (xe + số)</div>
+            <div class="text-xs text-slate-500">Đọc tự nhiên: "xe 1 đã hết giờ", không phát âm "ít e"</div>
+          </div>
+          <button id="settingVoiceToggle" onclick="toggleVoice()" class="relative inline-flex h-7 w-12 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none">
+            <span class="pointer-events-none inline-block h-6 w-6 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out"></span>
+          </button>
+        </div>
+
+        <!-- Fast Test Mode (5s) -->
+        <div class="flex items-center justify-between p-3 bg-amber-50 rounded-xl border border-amber-200">
+          <div class="pr-3">
+            <div class="text-sm font-bold text-amber-900">Chế độ Test nhanh (5 giây)</div>
+            <div class="text-xs text-amber-700">Gói 15 phút = 5 giây, Gói 30 phút = 10 giây để kiểm tra ngay</div>
+          </div>
+          <button id="settingTestToggle" onclick="toggleTestMode()" class="relative inline-flex h-7 w-12 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none">
+            <span class="pointer-events-none inline-block h-6 w-6 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out"></span>
+          </button>
+        </div>
+
+        <!-- Sound Testing Action Buttons -->
+        <div class="pt-1 flex flex-col sm:flex-row gap-2">
+          <button onclick="testAlarmAudio()"
+            class="flex-1 bg-blue-600 hover:bg-blue-700 text-white font-bold text-sm py-3 px-4 rounded-xl shadow-sm active:scale-95 transition flex items-center justify-center gap-2">
+            <svg class="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/><path d="M15.54 8.46a5 5 0 0 1 0 7.07"/><path d="M19.07 4.93a10 10 0 0 1 0 14.14"/></svg>
+            Thử âm thanh chuông & giọng đọc
+          </button>
+
+          <button onclick="promptClearAllData()"
+            class="bg-red-50 hover:bg-red-100 text-red-600 border border-red-200 font-bold text-sm py-3 px-4 rounded-xl active:scale-95 transition">
+            Xóa dữ liệu hôm nay
+          </button>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <!-- ==================== BOTTOM NAVIGATION ==================== -->
+  <nav class="fixed bottom-0 inset-x-0 z-30 bg-white/95 backdrop-blur-md border-t border-slate-200 shadow-[0_-4px_12px_rgba(0,0,0,0.06)]">
+    <div class="max-w-5xl mx-auto grid grid-cols-5 h-16">
+      <button onclick="switchTab('home')" data-tab="home" class="nav-btn flex flex-col items-center justify-center gap-0.5 text-blue-600 transition-colors">
+        <svg class="w-6 h-6" viewBox="0 0 24 24" fill="currentColor"><path d="M10 20v-6h4v6h5v-8h3L12 3 2 12h3v8z"/></svg>
+        <span class="text-[11px] font-bold">Home</span>
+      </button>
+
+      <button onclick="switchTab('report')" data-tab="report" class="nav-btn flex flex-col items-center justify-center gap-0.5 text-slate-500 transition-colors">
+        <svg class="w-6 h-6" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 3v18h18"/><path d="M18 17V9"/><path d="M13 17V5"/><path d="M8 17v-3"/></svg>
+        <span class="text-[11px] font-semibold">Report</span>
+      </button>
+
+      <button onclick="switchTab('history')" data-tab="history" class="nav-btn flex flex-col items-center justify-center gap-0.5 text-slate-500 transition-colors">
+        <svg class="w-6 h-6" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/><path d="M12 7v5l4 2"/></svg>
+        <span class="text-[11px] font-semibold">History</span>
+      </button>
+
+      <button onclick="switchTab('vehicles')" data-tab="vehicles" class="nav-btn flex flex-col items-center justify-center gap-0.5 text-slate-500 transition-colors">
+        <svg class="w-6 h-6" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="18.5" cy="17.5" r="3.5"/><circle cx="5.5" cy="17.5" r="3.5"/><circle cx="15" cy="5" r="1"/><path d="M12 17.5V14l-3-3 4-3 2 3h2"/></svg>
+        <span class="text-[11px] font-semibold">Vehicles</span>
+      </button>
+
+      <button onclick="switchTab('settings')" data-tab="settings" class="nav-btn flex flex-col items-center justify-center gap-0.5 text-slate-500 transition-colors">
+        <svg class="w-6 h-6" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
+        <span class="text-[11px] font-semibold">Settings</span>
+      </button>
+    </div>
+  </nav>
+
+  <!-- ==================== MODAL 1: PACKAGE SELECTION ==================== -->
+  <div id="packageModal" class="fixed inset-0 z-50 hidden items-center justify-center bg-slate-900/60 backdrop-blur-sm p-4">
+    <div class="bg-white w-full max-w-sm rounded-3xl shadow-2xl overflow-hidden border border-sky-100">
+      <div class="bg-gradient-to-r from-blue-600 to-sky-500 px-5 py-4 text-white text-center">
+        <div class="text-xs font-semibold uppercase tracking-wider text-sky-100">Bắt đầu bấm giờ</div>
+        <h3 id="packageModalTitle" class="text-xl font-black mt-0.5">Chọn gói dịch vụ</h3>
+      </div>
+
+      <div class="p-5 space-y-3">
+        <div id="packageTestNotice" class="hidden bg-amber-50 border border-amber-300 text-amber-800 rounded-xl px-3 py-2 text-xs font-bold text-center">
+          ⚡ Chế độ Test: Gói 15 phút = 5 giây • Gói 30 phút = 10 giây
+        </div>
+
+        <!-- 15 mins / 50k -->
+        <button onclick="startVehicleWithPackage(15, 50000)"
+          class="w-full flex items-center justify-between p-4 rounded-2xl bg-emerald-50 hover:bg-emerald-100 border-2 border-emerald-500 text-left transition active:scale-[0.98] shadow-sm">
+          <div>
+            <div class="text-base sm:text-lg font-extrabold text-emerald-900">Gói 15 phút</div>
+            <div class="text-xs font-medium text-emerald-700 mt-0.5">Tiêu chuẩn công viên</div>
+          </div>
+          <div class="text-right">
+            <div class="text-lg sm:text-xl font-black text-emerald-700">50.000đ</div>
+            <span class="inline-block text-[11px] font-extrabold bg-emerald-600 text-white px-2 py-0.5 rounded-full">50k</span>
+          </div>
+        </button>
+
+        <!-- 30 mins / 80k -->
+        <button onclick="startVehicleWithPackage(30, 80000)"
+          class="w-full flex items-center justify-between p-4 rounded-2xl bg-blue-50 hover:bg-blue-100 border-2 border-blue-500 text-left transition active:scale-[0.98] shadow-sm">
+          <div>
+            <div class="text-base sm:text-lg font-extrabold text-blue-900">Gói 30 phút</div>
+            <div class="text-xs font-medium text-blue-700 mt-0.5">Tiết kiệm hơn 20k</div>
+          </div>
+          <div class="text-right">
+            <div class="text-lg sm:text-xl font-black text-blue-700">80.000đ</div>
+            <span class="inline-block text-[11px] font-extrabold bg-blue-600 text-white px-2 py-0.5 rounded-full">80k</span>
+          </div>
+        </button>
+
+        <button onclick="closePackageModal()"
+          class="w-full py-3 rounded-2xl bg-slate-100 hover:bg-slate-200 text-slate-600 font-bold text-sm transition active:scale-95 mt-1">
+          Hủy
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ==================== MODAL 2: DỪNG / GIA HẠN ==================== -->
+  <div id="runningActionModal" class="fixed inset-0 z-50 hidden items-center justify-center bg-slate-900/60 backdrop-blur-sm p-4">
+    <div class="bg-white w-full max-w-sm rounded-3xl shadow-2xl overflow-hidden border border-amber-200">
+      <div class="bg-gradient-to-r from-amber-500 to-orange-500 px-5 py-4 text-white text-center">
+        <div class="text-xs font-semibold uppercase tracking-wider text-amber-100">Quản lý xe</div>
+        <h3 id="runningModalTitle" class="text-2xl font-black mt-0.5">Xe01</h3>
+        <div class="mt-2 inline-flex items-center gap-1.5 bg-black/20 px-3.5 py-1 rounded-full">
+          <span class="text-xs font-semibold text-amber-100">Thời gian:</span>
+          <span id="runningModalCountdown" class="font-mono font-black text-base tracking-wider text-white">00:00</span>
+        </div>
+      </div>
+
+      <div class="p-4 sm:p-5 space-y-3.5">
+        <div id="runningModalTestNotice" class="hidden bg-amber-50 border border-amber-300 text-amber-800 rounded-xl px-3 py-2 text-xs font-bold text-center">
+          ⚡ Chế độ Test: +15 phút = +5 giây • +30 phút = +10 giây
+        </div>
+
+        <div>
+          <div class="text-xs font-extrabold uppercase tracking-wide text-slate-500 mb-2 flex items-center gap-1.5">
+            <svg class="w-4 h-4 text-emerald-600" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="16"/><line x1="8" y1="12" x2="16" y2="12"/></svg>
+            Gia hạn thêm (Cộng dồn liên tục)
+          </div>
+
+          <div class="space-y-2.5">
+            <!-- Extend +15 min / 50k -->
+            <button onclick="extendVehicle(15, 50000)"
+              class="w-full flex items-center justify-between p-3.5 rounded-2xl bg-emerald-50 hover:bg-emerald-100 border-2 border-emerald-500 text-left transition active:scale-[0.98] shadow-sm">
+              <div>
+                <div class="text-base font-extrabold text-emerald-900">+15 phút</div>
+                <div class="text-[11px] font-medium text-emerald-700">Cộng thêm vào thời gian hiện tại</div>
+              </div>
+              <div class="text-right">
+                <div class="text-base sm:text-lg font-black text-emerald-700">50.000đ</div>
+                <span class="inline-block text-[11px] font-extrabold bg-emerald-600 text-white px-2 py-0.5 rounded-full">50k</span>
+              </div>
+            </button>
+
+            <!-- Extend +30 min / 80k -->
+            <button onclick="extendVehicle(30, 80000)"
+              class="w-full flex items-center justify-between p-3.5 rounded-2xl bg-blue-50 hover:bg-blue-100 border-2 border-blue-500 text-left transition active:scale-[0.98] shadow-sm">
+              <div>
+                <div class="text-base font-extrabold text-blue-900">+30 phút</div>
+                <div class="text-[11px] font-medium text-blue-700">Cộng thêm vào thời gian hiện tại</div>
+              </div>
+              <div class="text-right">
+                <div class="text-base sm:text-lg font-black text-blue-700">80.000đ</div>
+                <span class="inline-block text-[11px] font-extrabold bg-blue-600 text-white px-2 py-0.5 rounded-full">80k</span>
+              </div>
+            </button>
+          </div>
+        </div>
+
+        <div class="border-t border-slate-200 pt-3">
+          <button onclick="stopRunningVehicleNow()"
+            class="w-full py-3 rounded-2xl bg-red-600 hover:bg-red-700 text-white font-extrabold text-sm shadow-sm active:scale-[0.98] transition flex items-center justify-center gap-2">
+            <svg class="w-4 h-4" viewBox="0 0 24 24" fill="currentColor"><rect x="6" y="6" width="12" height="12" rx="2"/></svg>
+            Dừng xe ngay
+          </button>
+        </div>
+
+        <button onclick="closeRunningActionModal()"
+          class="w-full py-2.5 rounded-2xl bg-slate-100 hover:bg-slate-200 text-slate-600 font-bold text-sm transition active:scale-95">
+          Đóng / Hủy
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ==================== MODAL 3: CONFIRM ==================== -->
+  <div id="confirmModal" class="fixed inset-0 z-50 hidden items-center justify-center bg-slate-900/60 backdrop-blur-sm p-4">
+    <div class="bg-white w-full max-w-xs rounded-3xl shadow-2xl overflow-hidden border border-slate-100">
+      <div class="p-5 text-center">
+        <div class="w-12 h-12 rounded-2xl bg-amber-100 text-amber-600 flex items-center justify-center mx-auto mb-3">
+          <svg class="w-7 h-7" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+        </div>
+        <h3 id="confirmModalTitle" class="text-lg font-extrabold text-slate-800">Xác nhận</h3>
+        <p id="confirmModalDesc" class="text-sm text-slate-500 mt-1.5 leading-relaxed"></p>
+      </div>
+      <div class="grid grid-cols-2 gap-2 px-5 pb-5">
+        <button onclick="closeConfirmModal()"
+          class="py-2.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-sm active:scale-95 transition">
+          Hủy bỏ
+        </button>
+        <button id="confirmModalOkBtn"
+          class="py-2.5 rounded-xl bg-red-600 hover:bg-red-700 text-white font-bold text-sm active:scale-95 transition shadow-sm">
+          Đồng ý
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ==================== TOAST NOTIFICATION ==================== -->
+  <div id="toastContainer" class="fixed top-20 left-1/2 -translate-x-1/2 z-50 pointer-events-none flex flex-col items-center gap-2 w-11/12 max-w-sm"></div>
+
+  <!-- ==================== APPLICATION SCRIPT ==================== -->
+  <script>
+    /**
+     * ============================================================================
+     * CORE HELPERS & STATE INITIALIZATION
+     * ============================================================================
+     */
+
+    const STORAGE_KEY = 'pbcar_park_manager_v2';
+
+    function getTodayDateStr() {
+      const now = new Date();
+      const dd = String(now.getDate()).padStart(2, '0');
+      const mm = String(now.getMonth() + 1).padStart(2, '0');
+      const yyyy = now.getFullYear();
+      return `${dd}/${mm}/${yyyy}`;
+    }
+
+    function createDefaultVehicles(count = 24) {
+      const list = [];
+      for (let i = 1; i <= count; i++) {
+        list.push({
+          id: i,
+          name: `Xe${String(i).padStart(2, '0')}`,
+          status: 'idle', // 'idle' | 'running' | 'expired'
+          todayCount: 0,
+          packageMinutes: null,
+          totalMinutes: 0,
+          extensions: [],
+          price: 0,
+          startTime: null,
+          endTime: null,
+          currentHistoryId: null,
+        });
+      }
+      return list;
+    }
+
+    function formatCountdown(ms) {
+      if (!ms || ms <= 0) return '00:00';
+      const totalSeconds = Math.ceil(ms / 1000);
+      const minutes = Math.floor(totalSeconds / 60);
+      const seconds = totalSeconds % 60;
+      return `${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`;
+    }
+
+    function formatVND(amount) {
+      const num = Number(amount) || 0;
+      return num.toLocaleString('vi-VN') + ' đ';
+    }
+
+    function formatTime(ts) {
+      if (!ts) return '--:--';
+      const d = new Date(ts);
+      const hh = String(d.getHours()).padStart(2, '0');
+      const mm = String(d.getMinutes()).padStart(2, '0');
+      return `${hh}:${mm}`;
+    }
+
+    const DEFAULT_STATE = {
+      dateStr: getTodayDateStr(),
+      vehicles: createDefaultVehicles(24),
+      history: [],
+      settings: {
+        soundEnabled: true,
+        voiceEnabled: true,
+        testMode: false,
+      },
+    };
+
+    function loadState() {
+      try {
+        const raw = localStorage.getItem(STORAGE_KEY);
+        if (!raw) return DEFAULT_STATE;
+        const parsed = JSON.parse(raw);
+        const today = getTodayDateStr();
+
+        // New day reset
+        if (parsed.dateStr !== today) {
+          parsed.dateStr = today;
+          parsed.history = [];
+          if (Array.isArray(parsed.vehicles)) {
+            parsed.vehicles.forEach((v) => {
+              v.todayCount = 0;
+              if (v.status !== 'running') {
+                v.status = 'idle';
+                v.startTime = null;
+                v.endTime = null;
+              }
+            });
+          }
+        }
+
+        // Ensure 24 vehicles
+        if (Array.isArray(parsed.vehicles)) {
+          if (parsed.vehicles.length < 24) {
+            const startId = parsed.vehicles.length + 1;
+            for (let i = startId; i <= 24; i++) {
+              parsed.vehicles.push({
+                id: i,
+                name: `Xe${String(i).padStart(2, '0')}`,
+                status: 'idle',
+                todayCount: 0,
+                packageMinutes: null,
+                totalMinutes: 0,
+                extensions: [],
+                price: 0,
+                startTime: null,
+                endTime: null,
+                currentHistoryId: null,
+              });
+            }
+          }
+        } else {
+          parsed.vehicles = createDefaultVehicles(24);
+        }
+
+        if (!parsed.settings) parsed.settings = { ...DEFAULT_STATE.settings };
+        if (typeof parsed.settings.soundEnabled === 'undefined') parsed.settings.soundEnabled = true;
+        if (typeof parsed.settings.voiceEnabled === 'undefined') parsed.settings.voiceEnabled = true;
+        if (typeof parsed.settings.testMode === 'undefined') parsed.settings.testMode = false;
+
+        return parsed;
+      } catch (err) {
+        console.warn('Lỗi đọc localStorage:', err);
+        return DEFAULT_STATE;
+      }
+    }
+
+    function saveState() {
+      try {
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+      } catch (err) {
+        console.error('Lỗi lưu localStorage:', err);
+      }
+    }
+
+    let state = loadState();
+    let activeTab = 'home';
+    let selectedVehicleId = null;
+    let actionVehicleId = null;
+    let confirmCallback = null;
+
+    // Audio & Alarm runtime variables
+    let audioCtx = null;
+    let alarmIntervalId = null;
+    let lastVoiceSpeakTime = 0;
+    let cachedVietnameseVoice = null;
+    let ttsAudio = null;
+    let isTtsAudioPlaying = false;
+
+    /**
+     * ============================================================================
+     * VIETNAMESE PRONUNCIATION & AUDIO SYSTEM
+     * ============================================================================
+     */
+
+    function unlockAudio() {
+      try {
+        const AudioContextClass = window.AudioContext || window.webkitAudioContext;
+        if (!AudioContextClass) return;
+        if (!audioCtx) audioCtx = new AudioContextClass();
+        if (audioCtx.state === 'suspended') audioCtx.resume();
+      } catch (e) {
+        console.warn('AudioContext unlock:', e);
+      }
+    }
+
+    function findVietnameseVoice() {
+      if (!('speechSynthesis' in window)) return null;
+      try {
+        const voices = window.speechSynthesis.getVoices() || [];
+        if (voices.length === 0) return null;
+
+        let viVoice = voices.find((v) => v.lang && v.lang.toLowerCase().replace('_', '-') === 'vi-vn');
+        if (!viVoice) {
+          viVoice = voices.find((v) => v.lang && v.lang.toLowerCase().startsWith('vi'));
+        }
+        if (!viVoice) {
+          viVoice = voices.find((v) => v.name && /vietnam|tiếng việt|linh|hoaimy|namminh/i.test(v.name));
+        }
+        return viVoice || null;
+      } catch (e) {
+        return null;
+      }
+    }
+
+    function formatVehicleNameForSpeech(name) {
+      const cleaned = String(name || '').trim();
+      const match = cleaned.match(/^xe\s*0*(\d+)$/i);
+      if (match) {
+        return `xe ${parseInt(match[1], 10)}`;
+      }
+      return cleaned.replace(/^xe/i, 'xe ');
+    }
+
+    function playVietnameseTTSFallback(text, onFallbackError) {
+      try {
+        if (ttsAudio) {
+          ttsAudio.pause();
+          ttsAudio.currentTime = 0;
+        }
+        const url = `https://translate.google.com/translate_tts?ie=UTF-8&tl=vi&client=tw-ob&q=${encodeURIComponent(text)}`;
+        ttsAudio = new Audio(url);
+        ttsAudio.volume = 1.0;
+        isTtsAudioPlaying = true;
+
+        ttsAudio.onended = () => {
+          isTtsAudioPlaying = false;
+        };
+        ttsAudio.onerror = () => {
+          isTtsAudioPlaying = false;
+          if (typeof onFallbackError === 'function') onFallbackError();
+        };
+
+        const playPromise = ttsAudio.play();
+        if (playPromise && typeof playPromise.catch === 'function') {
+          playPromise.catch(() => {
+            isTtsAudioPlaying = false;
+            if (typeof onFallbackError === 'function') onFallbackError();
+          });
+        }
+      } catch (e) {
+        isTtsAudioPlaying = false;
+        if (typeof onFallbackError === 'function') onFallbackError();
+      }
+    }
+
+    function speakExpiredVehicles(vehicleNames) {
+      if (!state.settings.voiceEnabled) return;
+      if (!vehicleNames || vehicleNames.length === 0) return;
+
+      const formattedNames = vehicleNames
+        .map((name) => formatVehicleNameForSpeech(name))
+        .join(', ');
+
+      const speechText = `${formattedNames} đã hết giờ`;
+
+      if (isTtsAudioPlaying) return;
+      if ('speechSynthesis' in window && window.speechSynthesis.speaking) return;
+
+      const viVoice = cachedVietnameseVoice || findVietnameseVoice();
+      if (viVoice) cachedVietnameseVoice = viVoice;
+
+      const speakWithBrowserAPI = () => {
+        if (!('speechSynthesis' in window)) return;
+        try {
+          window.speechSynthesis.cancel();
+          const utterance = new SpeechSynthesisUtterance(speechText);
+          utterance.lang = 'vi-VN';
+          utterance.rate = 0.95;
+          utterance.pitch = 1.0;
+          utterance.volume = 1.0;
+          if (viVoice) utterance.voice = viVoice;
+          window.speechSynthesis.speak(utterance);
+        } catch (err) {
+          console.warn('SpeechSynthesis error:', err);
+        }
+      };
+
+      if (viVoice) {
+        speakWithBrowserAPI();
+      } else {
+        playVietnameseTTSFallback(speechText, speakWithBrowserAPI);
+      }
+    }
+
+    function playBeepChime() {
+      if (!state.settings.soundEnabled) return;
+      try {
+        unlockAudio();
+        if (!audioCtx) return;
+
+        const now = audioCtx.currentTime;
+        const notes = [
+          { freq: 980, start: 0.0, dur: 0.16 },
+          { freq: 1320, start: 0.20, dur: 0.16 },
+          { freq: 980, start: 0.40, dur: 0.22 },
+        ];
+
+        notes.forEach((n) => {
+          const osc = audioCtx.createOscillator();
+          const gain = audioCtx.createGain();
+          osc.type = 'triangle';
+          osc.frequency.setValueAtTime(n.freq, now + n.start);
+
+          gain.gain.setValueAtTime(0.001, now + n.start);
+          gain.gain.exponentialRampToValueAtTime(0.45, now + n.start + 0.02);
+          gain.gain.exponentialRampToValueAtTime(0.001, now + n.start + n.dur);
+
+          osc.connect(gain);
+          gain.connect(audioCtx.destination);
+
+          osc.start(now + n.start);
+          osc.stop(now + n.start + n.dur + 0.02);
+        });
+      } catch (err) {
+        console.warn('Không thể phát âm thanh:', err);
+      }
+    }
+
+    function triggerAlarmCycle(expiredVehicles) {
+      playBeepChime();
+      const now = Date.now();
+      if (now - lastVoiceSpeakTime > 5200) {
+        lastVoiceSpeakTime = now;
+        setTimeout(() => {
+          const stillExpired = state.vehicles.filter((v) => v.status === 'expired');
+          if (stillExpired.length > 0) {
+            speakExpiredVehicles(stillExpired.map((v) => v.name));
+          }
+        }, 650);
+      }
+    }
+
+    function syncAlarmLoop() {
+      const expiredVehicles = state.vehicles.filter((v) => v.status === 'expired');
+
+      if (expiredVehicles.length > 0) {
+        if (!alarmIntervalId) {
+          triggerAlarmCycle(expiredVehicles);
+          alarmIntervalId = setInterval(() => {
+            const currentExpired = state.vehicles.filter((v) => v.status === 'expired');
+            if (currentExpired.length === 0) {
+              stopAlarmLoop();
+              return;
+            }
+            triggerAlarmCycle(currentExpired);
+          }, 3000);
+        }
+      } else {
+        stopAlarmLoop();
+      }
+    }
+
+    function stopAlarmLoop() {
+      if (alarmIntervalId) {
+        clearInterval(alarmIntervalId);
+        alarmIntervalId = null;
+      }
+      if (ttsAudio) {
+        try {
+          ttsAudio.pause();
+          ttsAudio.currentTime = 0;
+        } catch (e) {}
+        isTtsAudioPlaying = false;
+      }
+      if ('speechSynthesis' in window) {
+        try {
+          window.speechSynthesis.cancel();
+        } catch (e) {}
+      }
+    }
+
+    function testAlarmAudio() {
+      unlockAudio();
+      const prevSound = state.settings.soundEnabled;
+      state.settings.soundEnabled = true;
+      playBeepChime();
+      state.settings.soundEnabled = prevSound;
+
+      if (state.settings.voiceEnabled) {
+        setTimeout(() => speakExpiredVehicles(['Xe01']), 650);
+      }
+      showToast('Đã phát thử âm thanh chuông & giọng đọc!', 'info');
+    }
+
+    /**
+     * ============================================================================
+     * CORE WORKFLOW (START, COUNTDOWN, EXTEND, EXPIRE, CONFIRM)
+     * ============================================================================
+     */
+
+    function openPackageModal(vehicleId) {
+      unlockAudio();
+      const vehicle = state.vehicles.find((v) => v.id === vehicleId);
+      if (!vehicle || vehicle.status !== 'idle') return;
+
+      selectedVehicleId = vehicleId;
+      document.getElementById('packageModalTitle').textContent = `Chọn gói dịch vụ - ${vehicle.name}`;
+
+      const testNotice = document.getElementById('packageTestNotice');
+      if (state.settings.testMode) {
+        testNotice.classList.remove('hidden');
+      } else {
+        testNotice.classList.add('hidden');
+      }
+
+      const modal = document.getElementById('packageModal');
+      modal.classList.remove('hidden');
+      modal.classList.add('flex');
+    }
+
+    function closePackageModal() {
+      selectedVehicleId = null;
+      const modal = document.getElementById('packageModal');
+      modal.classList.add('hidden');
+      modal.classList.remove('flex');
+    }
+
+    function startVehicleWithPackage(minutes, price) {
+      unlockAudio();
+      const vehicle = state.vehicles.find((v) => v.id === selectedVehicleId);
+      if (!vehicle) return;
+
+      const now = Date.now();
+      const testSec = minutes === 15 ? 5 : 10;
+      const durationMs = state.settings.testMode ? testSec * 1000 : minutes * 60 * 1000;
+
+      vehicle.status = 'running';
+      vehicle.packageMinutes = minutes;
+      vehicle.totalMinutes = minutes;
+      vehicle.extensions = [];
+      vehicle.price = price;
+      vehicle.startTime = now;
+      vehicle.endTime = now + durationMs;
+      vehicle.todayCount = (vehicle.todayCount || 0) + 1;
+
+      const historyItem = {
+        id: `${now}-${vehicle.id}`,
+        vehicleId: vehicle.id,
+        vehicleName: vehicle.name,
+        packageMinutes: minutes,
+        totalMinutes: minutes,
+        extensions: [],
+        packageLabel: `${minutes} phút`,
+        price: price,
+        startTime: now,
+        endTime: null,
+        status: 'Đang chạy',
+        isTest: state.settings.testMode,
+      };
+      vehicle.currentHistoryId = historyItem.id;
+      state.history.unshift(historyItem);
+
+      saveState();
+      closePackageModal();
+      renderAll();
+
+      const modeText = state.settings.testMode ? ` (Test ${testSec}s)` : '';
+      showToast(`${vehicle.name} bắt đầu gói ${minutes}p - ${formatVND(price)}${modeText}`, 'success');
+    }
+
+    function openRunningActionModal(vehicleId) {
+      unlockAudio();
+      const vehicle = state.vehicles.find((v) => v.id === vehicleId);
+      if (!vehicle || (vehicle.status !== 'running' && vehicle.status !== 'expired')) return;
+
+      actionVehicleId = vehicleId;
+      document.getElementById('runningModalTitle').textContent = vehicle.name;
+      document.getElementById('runningModalCountdown').textContent =
+        vehicle.status === 'expired' ? '00:00 (Hết giờ)' : formatCountdown((vehicle.endTime || Date.now()) - Date.now());
+
+      const testNotice = document.getElementById('runningModalTestNotice');
+      if (state.settings.testMode) {
+        testNotice.classList.remove('hidden');
+      } else {
+        testNotice.classList.add('hidden');
+      }
+
+      const modal = document.getElementById('runningActionModal');
+      modal.classList.remove('hidden');
+      modal.classList.add('flex');
+    }
+
+    function closeRunningActionModal() {
+      actionVehicleId = null;
+      const modal = document.getElementById('runningActionModal');
+      modal.classList.add('hidden');
+      modal.classList.remove('flex');
+    }
+
+    function extendVehicle(addMinutes, addPrice) {
+      unlockAudio();
+      const vehicle = state.vehicles.find((v) => v.id === actionVehicleId);
+      if (!vehicle || (vehicle.status !== 'running' && vehicle.status !== 'expired')) {
+        closeRunningActionModal();
+        return;
+      }
+
+      const now = Date.now();
+      const testSec = addMinutes === 15 ? 5 : 10;
+      const addMs = state.settings.testMode ? testSec * 1000 : addMinutes * 60 * 1000;
+
+      // Cumulative extension: extend from current endTime if still running, or from now if expired
+      const baseEnd = (vehicle.status === 'running' && vehicle.endTime && vehicle.endTime > now)
+        ? vehicle.endTime
+        : now;
+
+      vehicle.status = 'running';
+      vehicle.endTime = baseEnd + addMs;
+      vehicle.totalMinutes = (vehicle.totalMinutes || vehicle.packageMinutes || 0) + addMinutes;
+      vehicle.price = (vehicle.price || 0) + addPrice;
+      vehicle.todayCount = (vehicle.todayCount || 0) + 1;
+      if (!Array.isArray(vehicle.extensions)) vehicle.extensions = [];
+      vehicle.extensions.push({ minutes: addMinutes, price: addPrice, time: now });
+
+      // Update history item
+      if (vehicle.currentHistoryId) {
+        const h = state.history.find((item) => item.id === vehicle.currentHistoryId);
+        if (h) {
+          if (!Array.isArray(h.extensions)) h.extensions = [];
+          h.extensions.push({ minutes: addMinutes, price: addPrice, time: now });
+          h.totalMinutes = (h.totalMinutes || h.packageMinutes || 0) + addMinutes;
+          h.price = (h.price || 0) + addPrice;
+          h.status = 'Đang chạy';
+          h.endTime = null;
+
+          const parts = [`${h.packageMinutes}p`, ...h.extensions.map((ext) => `${ext.minutes}p`)];
+          h.packageLabel = `${parts.join(' + ')} (Gia hạn)`;
+        }
+      }
+
+      saveState();
+      closeRunningActionModal();
+      syncAlarmLoop();
+      renderAll();
+
+      const modeText = state.settings.testMode ? ` (+${testSec}s test)` : '';
+      showToast(`${vehicle.name} đã gia hạn +${addMinutes} phút (+${formatVND(addPrice)})${modeText}`, 'success');
+    }
+
+    function stopRunningVehicleNow() {
+      const vehicle = state.vehicles.find((v) => v.id === actionVehicleId);
+      if (!vehicle) {
+        closeRunningActionModal();
+        return;
+      }
+
+      const now = Date.now();
+      if (vehicle.currentHistoryId) {
+        const h = state.history.find((item) => item.id === vehicle.currentHistoryId);
+        if (h) {
+          h.endTime = now;
+          h.status = vehicle.status === 'expired' ? 'Hoàn thành' : 'Dừng sớm';
+        }
+      }
+
+      vehicle.status = 'idle';
+      vehicle.packageMinutes = null;
+      vehicle.totalMinutes = 0;
+      vehicle.extensions = [];
+      vehicle.price = 0;
+      vehicle.startTime = null;
+      vehicle.endTime = null;
+      vehicle.currentHistoryId = null;
+
+      saveState();
+      closeRunningActionModal();
+      syncAlarmLoop();
+      renderAll();
+      showToast(`Đã đưa ${vehicle.name} về XE CHỜ`, 'info');
+    }
+
+    function confirmExpiredVehicle(vehicleId) {
+      const vehicle = state.vehicles.find((v) => v.id === vehicleId);
+      if (!vehicle || vehicle.status !== 'expired') return;
+
+      const now = Date.now();
+      if (vehicle.currentHistoryId) {
+        const h = state.history.find((item) => item.id === vehicle.currentHistoryId);
+        if (h) {
+          h.endTime = now;
+          h.status = 'Hoàn thành';
+        }
+      }
+
+      vehicle.status = 'idle';
+      vehicle.packageMinutes = null;
+      vehicle.totalMinutes = 0;
+      vehicle.extensions = [];
+      vehicle.price = 0;
+      vehicle.startTime = null;
+      vehicle.endTime = null;
+      vehicle.currentHistoryId = null;
+
+      saveState();
+      syncAlarmLoop();
+      renderAll();
+      showToast(`${vehicle.name} đã xác nhận xong và về XE CHỜ`, 'success');
+    }
+
+    function timerTick() {
+      const now = Date.now();
+      let statusChanged = false;
+
+      state.vehicles.forEach((v) => {
+        if (v.status === 'running' && v.endTime) {
+          const remaining = v.endTime - now;
+          if (remaining <= 0) {
+            v.status = 'expired';
+            statusChanged = true;
+
+            if (actionVehicleId === v.id) {
+              const modalTimerEl = document.getElementById('runningModalCountdown');
+              if (modalTimerEl) modalTimerEl.textContent = '00:00 (Hết giờ)';
+            }
+
+            if (v.currentHistoryId) {
+              const h = state.history.find((item) => item.id === v.currentHistoryId);
+              if (h) {
+                h.endTime = now;
+                h.status = 'Hoàn thành';
+              }
+            }
+          } else {
+            const formatted = formatCountdown(remaining);
+            const timerEl = document.getElementById(`timer-${v.id}`);
+            if (timerEl) timerEl.textContent = formatted;
+
+            if (actionVehicleId === v.id) {
+              const modalTimerEl = document.getElementById('runningModalCountdown');
+              if (modalTimerEl) modalTimerEl.textContent = formatted;
+            }
+          }
+        }
+      });
+
+      if (statusChanged) {
+        saveState();
+        renderAll();
+        syncAlarmLoop();
+      }
+    }
+
+    /**
+     * ============================================================================
+     * RENDERING
+     * ============================================================================
+     */
+
+    function renderAll() {
+      renderHeader();
+      renderVehicleGrid();
+      renderGlobalExpiredBanner();
+      if (activeTab === 'report') renderReport();
+      if (activeTab === 'history') renderHistory();
+      if (activeTab === 'vehicles') renderVehiclesManage();
+      if (activeTab === 'settings') renderSettings();
+    }
+
+    function renderHeader() {
+      const today = getTodayDateStr();
+      document.getElementById('headerDate').textContent = `Today: ${today}`;
+
+      const testBtn = document.getElementById('quickTestBtn');
+      const testLabel = document.getElementById('quickTestLabel');
+      if (state.settings.testMode) {
+        testBtn.className = 'flex items-center gap-1 px-2.5 py-1.5 rounded-full text-[11px] font-extrabold transition-all active:scale-95 shadow-sm border bg-amber-400 text-amber-950 border-amber-200';
+        testLabel.textContent = 'Test 5s: BẬT';
+      } else {
+        testBtn.className = 'flex items-center gap-1 px-2.5 py-1.5 rounded-full text-[11px] font-bold transition-all active:scale-95 shadow-sm border bg-white/85 text-slate-600 border-white';
+        testLabel.textContent = 'Test 5s: TẮT';
+      }
+
+      const soundBtn = document.getElementById('quickSoundBtn');
+      if (state.settings.soundEnabled) {
+        soundBtn.innerHTML = `<svg class="w-4 h-4 text-blue-600" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/><path d="M15.54 8.46a5 5 0 0 1 0 7.07"/><path d="M19.07 4.93a10 10 0 0 1 0 14.14"/></svg>`;
+        soundBtn.classList.remove('bg-red-100', 'text-red-600');
+        soundBtn.classList.add('bg-white/95');
+      } else {
+        soundBtn.innerHTML = `<svg class="w-4 h-4 text-red-600" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/><line x1="23" y1="9" x2="17" y2="15"/><line x1="17" y1="9" x2="23" y2="15"/></svg>`;
+        soundBtn.classList.remove('bg-white/95');
+        soundBtn.classList.add('bg-red-100', 'text-red-600');
+      }
+    }
+
+    function renderGlobalExpiredBanner() {
+      const expired = state.vehicles.filter((v) => v.status === 'expired');
+      const banner = document.getElementById('globalExpiredBanner');
+      const textEl = document.getElementById('globalExpiredText');
+
+      if (expired.length > 0) {
+        const names = expired.map((v) => v.name).join(', ');
+        textEl.textContent = `HẾT GIỜ: ${names} — Vui lòng thu xe!`;
+        banner.classList.remove('hidden');
+      } else {
+        banner.classList.add('hidden');
+      }
+    }
+
+    function renderVehicleGrid() {
+      const grid = document.getElementById('vehicleGrid');
+      const now = Date.now();
+
+      let idleCount = 0;
+      let runningCount = 0;
+      let expiredCount = 0;
+
+      const html = state.vehicles
+        .map((v) => {
+          if (v.status === 'idle') idleCount++;
+          else if (v.status === 'running') runningCount++;
+          else if (v.status === 'expired') expiredCount++;
+
+          // 1. EXPIRED (RED ALERT)
+          if (v.status === 'expired') {
+            return `
+              <div class="expired-card-pulse rounded-2xl border-2 border-red-900 p-2 sm:p-2.5 flex flex-col items-center justify-between text-center shadow-lg text-white">
+                <div class="text-lg sm:text-xl font-black tracking-tight text-white drop-shadow-sm leading-tight">
+                  ${v.name}
+                </div>
+
+                <div class="w-full my-1.5 py-1 px-1 rounded-full bg-yellow-300 text-red-900 font-black text-[11px] sm:text-xs tracking-wider shadow-inner">
+                  KẾT THÚC
+                </div>
+
+                <div class="text-[11px] sm:text-xs font-bold text-red-100 mb-1.5 leading-none">
+                  Today: <span class="text-white font-black">${v.todayCount}</span>
+                </div>
+
+                <div class="w-full flex gap-1">
+                  <button onclick="openRunningActionModal(${v.id})"
+                    class="flex-1 py-2 px-1 rounded-xl bg-amber-400 hover:bg-amber-300 text-amber-950 font-black text-[10px] sm:text-xs shadow active:scale-95 transition leading-tight">
+                    GIA HẠN
+                  </button>
+                  <button onclick="confirmExpiredVehicle(${v.id})"
+                    class="flex-1 py-2 px-1 rounded-xl bg-white hover:bg-red-50 text-red-600 font-black text-[10px] sm:text-xs shadow active:scale-95 transition leading-tight">
+                    XÁC NHẬN
+                  </button>
+                </div>
+              </div>
+            `;
+          }
+
+          // 2. RUNNING (COUNTDOWN)
+          if (v.status === 'running') {
+            const remText = formatCountdown((v.endTime || now) - now);
+            const totalMin = v.totalMinutes || v.packageMinutes || 15;
+            const extCount = Array.isArray(v.extensions) ? v.extensions.length : 0;
+            const priceK = Math.round((v.price || 0) / 1000);
+            const pkgShort = extCount > 0 ? `${totalMin}p (GH) - ${priceK}k` : `${totalMin}p - ${priceK}k`;
+            return `
+              <div class="bg-white rounded-2xl border-2 border-amber-400 p-2 sm:p-2.5 flex flex-col items-center justify-between text-center shadow-md">
+                <div class="text-base sm:text-lg font-extrabold text-slate-800 leading-tight">
+                  ${v.name}
+                </div>
+
+                <div id="timer-${v.id}" class="w-full my-1.5 py-1 px-1 rounded-full bg-amber-500 text-white font-mono font-black text-sm sm:text-base tracking-wider shadow-inner">
+                  ${remText}
+                </div>
+
+                <div class="text-[10px] sm:text-[11px] font-bold text-amber-800 bg-amber-50 px-1.5 py-0.5 rounded-md mb-1 leading-tight truncate max-w-full">
+                  ${pkgShort}
+                </div>
+
+                <div class="text-[11px] sm:text-xs text-slate-500 mb-1.5 leading-none">
+                  Today: <span class="font-extrabold text-slate-800">${v.todayCount}</span>
+                </div>
+
+                <button onclick="openRunningActionModal(${v.id})"
+                  class="w-full py-2 px-1 rounded-xl bg-amber-100 hover:bg-amber-200 text-amber-900 border border-amber-300 font-extrabold text-[10px] sm:text-xs shadow-sm active:scale-95 transition leading-tight whitespace-nowrap">
+                  DỪNG / GIA HẠN
+                </button>
+              </div>
+            `;
+          }
+
+          // 3. IDLE (XE CHỜ)
+          return `
+            <div class="bg-white rounded-2xl border-2 border-emerald-400/80 p-2 sm:p-2.5 flex flex-col items-center justify-between text-center shadow-sm hover:shadow-md transition-shadow">
+              <div class="text-base sm:text-lg font-extrabold text-slate-800 leading-tight">
+                ${v.name}
+              </div>
+
+              <div class="w-full my-1.5 py-1 px-1 rounded-full bg-emerald-700 text-white font-bold text-[11px] sm:text-xs tracking-wide shadow-inner">
+                XE CHỜ
+              </div>
+
+              <div class="text-[11px] sm:text-xs text-slate-500 mb-1.5 leading-none">
+                Today: <span class="font-extrabold text-slate-800">${v.todayCount}</span>
+              </div>
+
+              <button onclick="openPackageModal(${v.id})"
+                class="w-full py-2 px-1 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-extrabold text-[11px] sm:text-xs shadow-sm active:scale-95 transition leading-tight">
+                BẮT ĐẦU
+              </button>
+            </div>
+          `;
+        })
+        .join('');
+
+      grid.innerHTML = html;
+
+      document.getElementById('statIdle').textContent = idleCount;
+      document.getElementById('statRunning').textContent = runningCount;
+      document.getElementById('statExpired').textContent = expiredCount;
+    }
+
+    function renderReport() {
+      document.getElementById('reportDateBadge').textContent = getTodayDateStr();
+
+      let pkg15Count = 0;
+      let pkg15Rev = 0;
+      let pkg30Count = 0;
+      let pkg30Rev = 0;
+      let totalRides = 0;
+
+      const perVehicleStats = {};
+      state.vehicles.forEach((v) => {
+        perVehicleStats[v.name] = { rides: 0, revenue: 0 };
+      });
+
+      state.history.forEach((item) => {
+        const basePrice = item.packageMinutes === 15 ? 50000 : 80000;
+        if (item.packageMinutes === 15) {
+          pkg15Count++;
+          pkg15Rev += basePrice;
+        } else if (item.packageMinutes === 30) {
+          pkg30Count++;
+          pkg30Rev += basePrice;
+        }
+
+        const extList = Array.isArray(item.extensions) ? item.extensions : [];
+        extList.forEach((ext) => {
+          if (ext.minutes === 15) {
+            pkg15Count++;
+            pkg15Rev += ext.price;
+          } else if (ext.minutes === 30) {
+            pkg30Count++;
+            pkg30Rev += ext.price;
+          }
+        });
+
+        const turns = 1 + extList.length;
+        totalRides += turns;
+
+        if (!perVehicleStats[item.vehicleName]) {
+          perVehicleStats[item.vehicleName] = { rides: 0, revenue: 0 };
+        }
+        perVehicleStats[item.vehicleName].rides += turns;
+        perVehicleStats[item.vehicleName].revenue += item.price;
+      });
+
+      const totalRev = pkg15Rev + pkg30Rev;
+
+      document.getElementById('reportTotalRevenue').textContent = formatVND(totalRev);
+      document.getElementById('reportTotalRides').textContent = `${totalRides} lượt`;
+
+      document.getElementById('reportPkg15Count').textContent = `${pkg15Count} gói`;
+      document.getElementById('reportPkg15Revenue').textContent = formatVND(pkg15Rev);
+
+      document.getElementById('reportPkg30Count').textContent = `${pkg30Count} gói`;
+      document.getElementById('reportPkg30Revenue').textContent = formatVND(pkg30Rev);
+
+      const tableEl = document.getElementById('reportVehicleTable');
+      const rows = Object.entries(perVehicleStats)
+        .map(([name, info]) => {
+          return `
+            <div class="flex items-center justify-between py-2.5 text-sm">
+              <div class="flex items-center gap-2.5">
+                <span class="w-12 text-center font-extrabold text-slate-800 bg-slate-100 py-1 rounded-lg text-xs">${name}</span>
+                <span class="text-xs font-semibold text-slate-500">${info.rides} lượt</span>
+              </div>
+              <span class="font-extrabold ${info.revenue > 0 ? 'text-emerald-600' : 'text-slate-400'}">
+                ${formatVND(info.revenue)}
+              </span>
+            </div>
+          `;
+        })
+        .join('');
+
+      tableEl.innerHTML = rows || '<div class="text-center text-slate-400 text-sm py-6">Chưa có dữ liệu</div>';
+    }
+
+    function renderHistory() {
+      const listEl = document.getElementById('historyList');
+
+      // Tính tổng tất cả số lượt (lượt bắt đầu ban đầu + các lượt gia hạn)
+      const totalTurns = state.history.reduce((sum, h) => {
+        const extCount = Array.isArray(h.extensions) ? h.extensions.length : 0;
+        return sum + 1 + extCount;
+      }, 0);
+
+      document.getElementById('historyCountBadge').textContent = `${totalTurns} lượt`;
+
+      if (state.history.length === 0) {
+        listEl.innerHTML = `
+          <div class="text-center py-10 text-slate-400">
+            <svg class="w-12 h-12 mx-auto mb-2 opacity-50" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+            <div class="text-sm font-semibold">Chưa có lượt chạy nào hôm nay</div>
+            <div class="text-xs mt-1">Bấm "BẮT ĐẦU" ở màn hình Home để bắt đầu tính giờ</div>
+          </div>
+        `;
+        return;
+      }
+
+      listEl.innerHTML = state.history
+        .map((h) => {
+          let badgeClass = 'bg-emerald-100 text-emerald-700';
+          if (h.status === 'Đang chạy') badgeClass = 'bg-amber-100 text-amber-700';
+          if (h.status === 'Dừng sớm') badgeClass = 'bg-slate-200 text-slate-700';
+
+          const extList = Array.isArray(h.extensions) ? h.extensions : [];
+          const turns = 1 + extList.length;
+          const initialPrice = h.packageMinutes === 15 ? 50000 : 80000;
+
+          // Bóc tách chi tiết từng lượt (Lượt gốc + các lượt gia hạn)
+          const extensionsHtml = extList.length > 0 ? `
+            <div class="mt-2.5 pt-2 border-t border-slate-200/80 text-[11px] sm:text-xs space-y-1">
+              <div class="flex items-center justify-between text-slate-600">
+                <span>• Lượt 1 (Gói ${h.packageMinutes}p ban đầu):</span>
+                <span class="font-bold text-slate-700">${formatVND(initialPrice)}</span>
+              </div>
+              ${extList.map((ext, idx) => `
+                <div class="flex items-center justify-between text-amber-800">
+                  <span>• Lượt ${idx + 2} (Gia hạn +${ext.minutes}p lúc ${formatTime(ext.time)}):</span>
+                  <span class="font-extrabold text-emerald-600">+${formatVND(ext.price)}</span>
+                </div>
+              `).join('')}
+            </div>
+          ` : '';
+
+          return `
+            <div class="p-3 sm:p-3.5 rounded-2xl bg-slate-50 border border-slate-200 shadow-sm transition hover:shadow">
+              <div class="flex items-center justify-between gap-2">
+                <div class="min-w-0">
+                  <div class="flex items-center flex-wrap gap-1.5 sm:gap-2">
+                    <span class="font-black text-slate-900 text-sm sm:text-base">${h.vehicleName}</span>
+                    <span class="text-[11px] font-extrabold px-2 py-0.5 rounded-full ${turns > 1 ? 'bg-amber-100 text-amber-800 border border-amber-300' : 'bg-slate-200 text-slate-700'}">
+                      ${turns} lượt
+                    </span>
+                    <span class="text-[11px] font-bold px-2 py-0.5 rounded-full bg-blue-100 text-blue-700">${h.packageLabel}</span>
+                    ${h.isTest ? '<span class="text-[10px] font-bold px-1.5 py-0.5 rounded bg-amber-200 text-amber-900">TEST</span>' : ''}
+                  </div>
+                  <div class="text-xs text-slate-500 mt-1">
+                    Bắt đầu: <strong class="text-slate-700">${formatTime(h.startTime)}</strong>
+                    ${h.endTime ? ` • Kết thúc: <strong class="text-slate-700">${formatTime(h.endTime)}</strong>` : ''}
+                  </div>
+                </div>
+                <div class="text-right shrink-0">
+                  <div class="font-black text-emerald-600 text-sm sm:text-base">${formatVND(h.price)}</div>
+                  <span class="inline-block mt-1 text-[10px] font-bold px-2 py-0.5 rounded-full ${badgeClass}">${h.status}</span>
+                </div>
+              </div>
+              ${extensionsHtml}
+            </div>
+          `;
+        })
+        .join('');
+    }
+
+    function renderVehiclesManage() {
+      document.getElementById('vehiclesTotalCount').textContent = state.vehicles.length;
+      const container = document.getElementById('vehiclesManageList');
+
+      container.innerHTML = state.vehicles
+        .map((v) => {
+          const isBusy = v.status !== 'idle';
+          return `
+            <div class="p-3 rounded-xl border ${isBusy ? 'bg-amber-50 border-amber-200' : 'bg-slate-50 border-slate-200'} flex items-center justify-between">
+              <div>
+                <div class="font-extrabold text-slate-800 text-sm">${v.name}</div>
+                <div class="text-[11px] text-slate-500">Today: ${v.todayCount} lượt</div>
+              </div>
+              <button onclick="removeVehicle(${v.id})" ${isBusy ? 'disabled' : ''}
+                class="p-1.5 rounded-lg ${isBusy ? 'text-slate-300 cursor-not-allowed' : 'text-red-500 hover:bg-red-100 active:scale-95'} transition"
+                title="${isBusy ? 'Không thể xóa xe đang chạy' : 'Xóa xe'}">
+                <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>
+              </button>
+            </div>
+          `;
+        })
+        .join('');
+    }
+
+    function renderSettings() {
+      updateToggleUI('settingSoundToggle', state.settings.soundEnabled, 'bg-blue-600');
+      updateToggleUI('settingVoiceToggle', state.settings.voiceEnabled, 'bg-blue-600');
+      updateToggleUI('settingTestToggle', state.settings.testMode, 'bg-amber-500');
+    }
+
+    function updateToggleUI(btnId, isOn, activeBg) {
+      const btn = document.getElementById(btnId);
+      if (!btn) return;
+      const knob = btn.querySelector('span');
+      if (isOn) {
+        btn.className = `relative inline-flex h-7 w-12 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none ${activeBg}`;
+        knob.classList.add('translate-x-5');
+        knob.classList.remove('translate-x-0');
+      } else {
+        btn.className = 'relative inline-flex h-7 w-12 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none bg-slate-300';
+        knob.classList.remove('translate-x-5');
+        knob.classList.add('translate-x-0');
+      }
+    }
+
+    /**
+     * ============================================================================
+     * SETTINGS & CONTROL ACTIONS
+     * ============================================================================
+     */
+
+    function addVehicle() {
+      const maxId = state.vehicles.reduce((max, v) => Math.max(max, v.id), 0);
+      const nextId = maxId + 1;
+      const name = `Xe${String(nextId).padStart(2, '0')}`;
+
+      state.vehicles.push({
+        id: nextId,
+        name: name,
+        status: 'idle',
+        todayCount: 0,
+        packageMinutes: null,
+        totalMinutes: 0,
+        extensions: [],
+        price: 0,
+        startTime: null,
+        endTime: null,
+        currentHistoryId: null,
+      });
+
+      saveState();
+      renderAll();
+      showToast(`Đã thêm ${name}`, 'success');
+    }
+
+    function removeVehicle(id) {
+      const v = state.vehicles.find((item) => item.id === id);
+      if (!v) return;
+      if (v.status !== 'idle') {
+        showToast('Chỉ có thể xóa xe đang ở trạng thái XE CHỜ', 'error');
+        return;
+      }
+
+      openConfirmModal(
+        `Xóa ${v.name}?`,
+        `Bạn có chắc muốn xóa ${v.name} khỏi danh sách xe điện không?`,
+        'Xóa xe',
+        () => {
+          state.vehicles = state.vehicles.filter((item) => item.id !== id);
+          saveState();
+          renderAll();
+          showToast(`Đã xóa ${v.name}`, 'info');
+        }
+      );
+    }
+
+    function promptResetTodayCounts() {
+      openConfirmModal(
+        'Reset số lượt Today?',
+        'Đưa số lượt chạy "Today" của tất cả các xe về 0.',
+        'Reset về 0',
+        () => {
+          state.vehicles.forEach((v) => {
+            v.todayCount = 0;
+          });
+          saveState();
+          renderAll();
+          showToast('Đã reset số lượt Today về 0', 'success');
+        }
+      );
+    }
+
+    function promptClearAllData() {
+      openConfirmModal(
+        'Xóa toàn bộ dữ liệu hôm nay?',
+        'Thao tác này sẽ xóa toàn bộ lịch sử, báo cáo doanh thu và đưa tất cả 24 xe về XE CHỜ (Today: 0).',
+        'Xóa tất cả',
+        () => {
+          stopAlarmLoop();
+          state.history = [];
+          state.vehicles.forEach((v) => {
+            v.status = 'idle';
+            v.todayCount = 0;
+            v.packageMinutes = null;
+            v.totalMinutes = 0;
+            v.extensions = [];
+            v.price = 0;
+            v.startTime = null;
+            v.endTime = null;
+            v.currentHistoryId = null;
+          });
+          saveState();
+          renderAll();
+          showToast('Đã xóa toàn bộ dữ liệu hôm nay', 'info');
+        }
+      );
+    }
+
+    function toggleSound() {
+      unlockAudio();
+      state.settings.soundEnabled = !state.settings.soundEnabled;
+      saveState();
+      renderAll();
+      showToast(state.settings.soundEnabled ? 'Đã BẬT âm thanh cảnh báo' : 'Đã TẮT âm thanh cảnh báo', 'info');
+    }
+
+    function toggleVoice() {
+      state.settings.voiceEnabled = !state.settings.voiceEnabled;
+      saveState();
+      renderAll();
+      showToast(state.settings.voiceEnabled ? 'Đã BẬT giọng đọc tên xe' : 'Đã TẮT giọng đọc tên xe', 'info');
+    }
+
+    function toggleTestMode() {
+      state.settings.testMode = !state.settings.testMode;
+      saveState();
+      renderAll();
+      showToast(
+        state.settings.testMode
+          ? 'Đã BẬT chế độ Test nhanh (5 giây)'
+          : 'Đã TẮT chế độ Test (15 / 30 phút thực tế)',
+        state.settings.testMode ? 'warning' : 'info'
+      );
+    }
+
+    /**
+     * ============================================================================
+     * MODAL & TOAST
+     * ============================================================================
+     */
+
+    function switchTab(tabName) {
+      activeTab = tabName;
+
+      document.querySelectorAll('.tab-section').forEach((sec) => {
+        sec.classList.add('hidden');
+      });
+      const target = document.getElementById(`tab-${tabName}`);
+      if (target) target.classList.remove('hidden');
+
+      document.querySelectorAll('.nav-btn').forEach((btn) => {
+        const isCurrent = btn.getAttribute('data-tab') === tabName;
+        if (isCurrent) {
+          btn.classList.remove('text-slate-500');
+          btn.classList.add('text-blue-600');
+          btn.querySelector('span').classList.add('font-bold');
+        } else {
+          btn.classList.add('text-slate-500');
+          btn.classList.remove('text-blue-600');
+          btn.querySelector('span').classList.remove('font-bold');
+        }
+      });
+
+      renderAll();
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
+
+    function openConfirmModal(title, desc, okLabel, onConfirm) {
+      document.getElementById('confirmModalTitle').textContent = title;
+      document.getElementById('confirmModalDesc').textContent = desc;
+      const okBtn = document.getElementById('confirmModalOkBtn');
+      okBtn.textContent = okLabel || 'Đồng ý';
+
+      confirmCallback = onConfirm;
+      okBtn.onclick = () => {
+        const cb = confirmCallback;
+        closeConfirmModal();
+        if (typeof cb === 'function') cb();
+      };
+
+      const modal = document.getElementById('confirmModal');
+      modal.classList.remove('hidden');
+      modal.classList.add('flex');
+    }
+
+    function closeConfirmModal() {
+      confirmCallback = null;
+      const modal = document.getElementById('confirmModal');
+      modal.classList.add('hidden');
+      modal.classList.remove('flex');
+    }
+
+    function showToast(message, type = 'info') {
+      const container = document.getElementById('toastContainer');
+      const toast = document.createElement('div');
+
+      const colors = {
+        success: 'bg-emerald-700 text-white border-emerald-500',
+        error: 'bg-red-600 text-white border-red-400',
+        warning: 'bg-amber-500 text-amber-950 border-amber-300',
+        info: 'bg-slate-800 text-white border-slate-600',
+      };
+
+      toast.className = `px-4 py-2.5 rounded-2xl shadow-xl border text-xs sm:text-sm font-bold text-center transition-all duration-300 opacity-0 translate-y-2 ${colors[type] || colors.info}`;
+      toast.textContent = message;
+      container.appendChild(toast);
+
+      requestAnimationFrame(() => {
+        toast.classList.remove('opacity-0', 'translate-y-2');
+      });
+
+      setTimeout(() => {
+        toast.classList.add('opacity-0', '-translate-y-2');
+        setTimeout(() => toast.remove(), 300);
+      }, 2400);
+    }
+
+    /**
+     * ============================================================================
+     * APP INIT
+     * ============================================================================
+     */
+
+    let appInitialized = false;
+    let timerIntervalId = null;
+
+    function initApp() {
+      if (appInitialized) return;
+      appInitialized = true;
+
+      const modalBackdrops = [
+        { id: 'packageModal', closeFn: closePackageModal },
+        { id: 'runningActionModal', closeFn: closeRunningActionModal },
+        { id: 'confirmModal', closeFn: closeConfirmModal },
+      ];
+
+      modalBackdrops.forEach(({ id, closeFn }) => {
+        const modalEl = document.getElementById(id);
+        if (modalEl) {
+          modalEl.addEventListener('click', (e) => {
+            if (e.target === modalEl) closeFn();
+          });
+        }
+      });
+
+      if ('speechSynthesis' in window) {
+        try {
+          cachedVietnameseVoice = findVietnameseVoice();
+          window.speechSynthesis.onvoiceschanged = () => {
+            cachedVietnameseVoice = findVietnameseVoice();
+          };
+        } catch (e) {}
+      }
+
+      timerTick();
+      renderAll();
+      syncAlarmLoop();
+
+      if (!timerIntervalId) {
+        timerIntervalId = setInterval(timerTick, 250);
+      }
+    }
+
+    if (document.readyState === 'loading') {
+      document.addEventListener('DOMContentLoaded', initApp);
+    } else {
+      initApp();
+    }
+  </script>
+</body>
+</html>
